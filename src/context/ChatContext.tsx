@@ -1,6 +1,7 @@
+
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Conversation, Message, User } from '../types';
+import { Conversation, Message, User, Reaction, parseUserStatus, parseMessageContentType, parseMessageStatus, parseReactions } from '../types';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -55,13 +56,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           
         if (error) throw error;
         
-        const formattedUsers: User[] = data.map((profile: any) => ({
+        const formattedUsers: User[] = data.map((profile) => ({
           id: profile.id,
           email: profile.email || '',
           username: profile.username,
           full_name: profile.full_name,
           avatar_url: profile.avatar_url,
-          status: profile.status || 'offline',
+          status: parseUserStatus(profile.status),
           role: profile.role || 'user',
           last_seen: profile.last_seen || new Date().toISOString(),
         }));
@@ -89,7 +90,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             u.id === payload.new.id 
               ? { 
                 ...u, 
-                status: payload.new.status, 
+                status: parseUserStatus(payload.new.status), 
                 last_seen: payload.new.last_seen 
               } 
               : u
@@ -157,7 +158,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               username: profile.username,
               full_name: profile.full_name,
               avatar_url: profile.avatar_url,
-              status: profile.status || 'offline',
+              status: parseUserStatus(profile.status),
               role: profile.role || 'user',
               last_seen: profile.last_seen || new Date().toISOString(),
             })) || [];
@@ -170,21 +171,23 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
               .order('created_at', { ascending: false })
               .limit(1);
               
-            const lastMessage = messagesData && messagesData.length > 0 
-              ? {
-                  id: messagesData[0].id,
-                  conversation_id: messagesData[0].conversation_id,
-                  sender_id: messagesData[0].sender_id,
-                  content: messagesData[0].content,
-                  content_type: messagesData[0].content_type,
-                  created_at: messagesData[0].created_at,
-                  updated_at: messagesData[0].updated_at,
-                  is_edited: messagesData[0].is_edited,
-                  status: messagesData[0].status,
-                  reactions: messagesData[0].reactions || [],
-                  reply_to: messagesData[0].reply_to,
-                } as Message
-              : undefined;
+            let lastMessage: Message | undefined = undefined;
+            if (messagesData && messagesData.length > 0) {
+              const msgData = messagesData[0];
+              lastMessage = {
+                id: msgData.id,
+                conversation_id: msgData.conversation_id,
+                sender_id: msgData.sender_id,
+                content: msgData.content,
+                content_type: parseMessageContentType(msgData.content_type),
+                created_at: msgData.created_at,
+                updated_at: msgData.updated_at,
+                is_edited: msgData.is_edited || false,
+                status: parseMessageStatus(msgData.status),
+                reactions: parseReactions(msgData.reactions),
+                reply_to: msgData.reply_to,
+              };
+            }
               
             // Get unread count
             const { data: unreadData } = await supabase
@@ -199,7 +202,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
             return {
               id: conv.id,
               name: conv.name,
-              type: conv.type,
+              type: conv.type as 'direct' | 'group' | 'community',
               created_at: conv.created_at,
               updated_at: conv.updated_at,
               participants,
@@ -273,12 +276,12 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           conversation_id: message.conversation_id,
           sender_id: message.sender_id,
           content: message.content,
-          content_type: message.content_type,
+          content_type: parseMessageContentType(message.content_type),
           created_at: message.created_at,
           updated_at: message.updated_at,
-          is_edited: message.is_edited,
-          status: message.status,
-          reactions: message.reactions || [],
+          is_edited: message.is_edited || false,
+          status: parseMessageStatus(message.status),
+          reactions: parseReactions(message.reactions),
           reply_to: message.reply_to,
         }));
         
@@ -324,45 +327,47 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
           filter: `conversation_id=eq.${currentConversation.id}`
         }, (payload) => {
           if (payload.eventType === 'INSERT') {
+            const newMessageData = payload.new;
             const newMessage: Message = {
-              id: payload.new.id,
-              conversation_id: payload.new.conversation_id,
-              sender_id: payload.new.sender_id,
-              content: payload.new.content,
-              content_type: payload.new.content_type,
-              created_at: payload.new.created_at,
-              updated_at: payload.new.updated_at,
-              is_edited: payload.new.is_edited,
-              status: payload.new.status,
-              reactions: payload.new.reactions || [],
-              reply_to: payload.new.reply_to,
+              id: newMessageData.id,
+              conversation_id: newMessageData.conversation_id,
+              sender_id: newMessageData.sender_id,
+              content: newMessageData.content,
+              content_type: parseMessageContentType(newMessageData.content_type),
+              created_at: newMessageData.created_at,
+              updated_at: newMessageData.updated_at,
+              is_edited: newMessageData.is_edited || false,
+              status: parseMessageStatus(newMessageData.status),
+              reactions: parseReactions(newMessageData.reactions),
+              reply_to: newMessageData.reply_to,
             };
             
             setMessages(prev => [...prev, newMessage]);
             
             // If message is not from current user, mark as delivered
-            if (user && payload.new.sender_id !== user.id) {
+            if (user && newMessageData.sender_id !== user.id) {
               supabase
                 .from('messages')
                 .update({ status: 'delivered' })
-                .eq('id', payload.new.id);
+                .eq('id', newMessageData.id);
             }
           } else if (payload.eventType === 'UPDATE') {
+            const updatedMessageData = payload.new;
             setMessages(prev => 
               prev.map(msg => 
-                msg.id === payload.new.id 
+                msg.id === updatedMessageData.id 
                   ? {
-                      id: payload.new.id,
-                      conversation_id: payload.new.conversation_id,
-                      sender_id: payload.new.sender_id,
-                      content: payload.new.content,
-                      content_type: payload.new.content_type,
-                      created_at: payload.new.created_at,
-                      updated_at: payload.new.updated_at,
-                      is_edited: payload.new.is_edited,
-                      status: payload.new.status,
-                      reactions: payload.new.reactions || [],
-                      reply_to: payload.new.reply_to,
+                      id: updatedMessageData.id,
+                      conversation_id: updatedMessageData.conversation_id,
+                      sender_id: updatedMessageData.sender_id,
+                      content: updatedMessageData.content,
+                      content_type: parseMessageContentType(updatedMessageData.content_type),
+                      created_at: updatedMessageData.created_at,
+                      updated_at: updatedMessageData.updated_at,
+                      is_edited: updatedMessageData.is_edited || false,
+                      status: parseMessageStatus(updatedMessageData.status),
+                      reactions: parseReactions(updatedMessageData.reactions),
+                      reply_to: updatedMessageData.reply_to,
                     } 
                   : msg
               )
@@ -405,7 +410,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     content: string, 
     contentType: 'text' | 'image' | 'file' | 'emoji' = 'text',
     replyToMessageId?: string
-  ) => {
+  ): Promise<void> => {
     if (!user || !currentConversation) return;
     
     try {
@@ -434,8 +439,6 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .from('conversations')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', currentConversation.id);
-        
-      return data[0].id;
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
@@ -530,16 +533,16 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       if (messageError) throw messageError;
       
-      let reactions = messageData.reactions || [];
+      let reactionsArray = parseReactions(messageData.reactions);
       
       // Check if user already added this emoji
-      const existingReactionIndex = reactions.findIndex(
-        (r: any) => r.user_id === user.id && r.emoji === emoji
+      const existingReactionIndex = reactionsArray.findIndex(
+        (r) => r.user_id === user.id && r.emoji === emoji
       );
       
       if (existingReactionIndex === -1) {
         // Add new reaction
-        reactions.push({
+        reactionsArray.push({
           user_id: user.id,
           emoji: emoji,
         });
@@ -547,7 +550,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Update message with new reactions
         const { error } = await supabase
           .from('messages')
-          .update({ reactions })
+          .update({ reactions: reactionsArray })
           .eq('id', messageId);
           
         if (error) throw error;
@@ -575,17 +578,17 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       if (messageError) throw messageError;
       
-      let reactions = messageData.reactions || [];
+      let reactionsArray = parseReactions(messageData.reactions);
       
       // Filter out the reaction to remove
-      reactions = reactions.filter(
-        (r: any) => !(r.user_id === user.id && r.emoji === emoji)
+      reactionsArray = reactionsArray.filter(
+        (r) => !(r.user_id === user.id && r.emoji === emoji)
       );
       
       // Update message with new reactions
       const { error } = await supabase
         .from('messages')
-        .update({ reactions })
+        .update({ reactions: reactionsArray })
         .eq('id', messageId);
         
       if (error) throw error;
@@ -603,7 +606,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     participantIds: string[], 
     name?: string, 
     type: 'direct' | 'group' | 'community' = 'direct'
-  ) => {
+  ): Promise<string> => {
     if (!user) throw new Error('No user logged in');
     
     try {
@@ -725,13 +728,13 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
       if (error) throw error;
       
-      return data.map((profile: any) => ({
+      return data.map((profile) => ({
         id: profile.id,
         email: profile.email || '',
         username: profile.username,
         full_name: profile.full_name,
         avatar_url: profile.avatar_url,
-        status: profile.status || 'offline',
+        status: parseUserStatus(profile.status),
         role: profile.role || 'user',
         last_seen: profile.last_seen || new Date().toISOString(),
       }));

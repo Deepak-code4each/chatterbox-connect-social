@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User } from '../types';
+import { User, parseUserStatus } from '../types';
 import { Session } from '@supabase/supabase-js';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -55,7 +55,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             username: profileData.username,
             full_name: profileData.full_name,
             avatar_url: profileData.avatar_url,
-            status: profileData.status || 'offline',
+            status: parseUserStatus(profileData.status),
             role: profileData.role || 'user',
             last_seen: profileData.last_seen || new Date().toISOString(),
           });
