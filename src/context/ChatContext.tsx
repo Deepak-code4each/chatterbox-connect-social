@@ -1,15 +1,8 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/integrations/supabase/client';
 import { Conversation, Message, User } from '../types';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-
-// Initialize Supabase client
-const supabaseUrl = 'https://your-supabase-project-url.supabase.co';
-const supabaseAnonKey = 'your-supabase-anon-key';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 interface ChatContextType {
   conversations: Conversation[];
@@ -698,7 +691,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const setUserTyping = async (isTyping: boolean) => {
+  const handleUserTyping = async (isTyping: boolean) => {
     if (!user || !currentConversation) return;
     
     try {
@@ -767,7 +760,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         addReaction,
         removeReaction,
         createConversation,
-        setUserTyping,
+        setUserTyping: handleUserTyping,
         searchUsers,
       }}
     >

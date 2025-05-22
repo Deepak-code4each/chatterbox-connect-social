@@ -36,27 +36,19 @@ export const UserList: React.FC = () => {
     try {
       const conversationId = await createConversation([userId]);
       
-      // Find the conversation
-      const conversation = await new Promise(resolve => {
-        // Short delay to allow the subscription to update the conversations list
-        setTimeout(() => {
-          const conversation = window.chatContext.conversations.find(c => c.id === conversationId);
-          resolve(conversation);
-        }, 500);
-      });
+      // Find the conversation in the current context
+      const chatContext = useChat();
+      setTimeout(() => {
+        const conversation = chatContext.conversations.find(c => c.id === conversationId);
+        if (conversation) {
+          setCurrentConversation(conversation);
+        }
+      }, 500);
       
-      if (conversation) {
-        setCurrentConversation(conversation);
-      }
     } catch (error) {
       console.error('Error starting conversation:', error);
     }
   };
-
-  // Attach chat context to window for accessing outside of React components
-  React.useEffect(() => {
-    (window as any).chatContext = useChat();
-  }, []);
 
   const getLastSeenText = (lastSeen: string) => {
     try {
