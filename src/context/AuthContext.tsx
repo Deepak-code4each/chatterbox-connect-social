@@ -1,14 +1,9 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User } from '../types';
-import { createClient, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
 import { useToast } from '@/components/ui/use-toast';
-
-// Initialize Supabase client
-const supabaseUrl = 'https://your-supabase-project-url.supabase.co';
-const supabaseAnonKey = 'your-supabase-anon-key';
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { supabase } from '@/integrations/supabase/client';
 
 interface AuthContextType {
   user: User | null;
