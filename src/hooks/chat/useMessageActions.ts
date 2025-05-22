@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { reactionsToJson } from '@/types';
+import { parseReactions, reactionsToJson, Reaction } from '@/types';
 import { useToast } from '@/components/ui/use-toast';
 
 export function useMessageActions(userId: string | undefined) {
@@ -133,8 +133,8 @@ export function useMessageActions(userId: string | undefined) {
         
       if (messageError) throw messageError;
       
-      let reactionsArray = messageData.reactions ? 
-        (Array.isArray(messageData.reactions) ? messageData.reactions : []) : [];
+      // Parse the reactions properly
+      const reactionsArray = parseReactions(messageData.reactions);
       
       // Check if user already added this emoji
       const existingReactionIndex = reactionsArray.findIndex(
@@ -179,8 +179,8 @@ export function useMessageActions(userId: string | undefined) {
         
       if (messageError) throw messageError;
       
-      let reactionsArray = messageData.reactions ? 
-        (Array.isArray(messageData.reactions) ? messageData.reactions : []) : [];
+      // Parse the reactions properly
+      let reactionsArray = parseReactions(messageData.reactions);
       
       // Filter out the reaction to remove
       reactionsArray = reactionsArray.filter(
