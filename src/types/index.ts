@@ -57,7 +57,7 @@ export type UserStatus = 'online' | 'offline' | 'away' | 'busy';
 
 // Helper functions to safely type data from Supabase
 export function parseUserStatus(status: string | null | undefined): UserStatus {
-  if (status === 'online' || status === 'offline' || status === 'away' || status === 'busy') {
+  if (status === 'online' || status === 'away' || status === 'busy') {
     return status;
   }
   return 'offline'; // Default status
@@ -93,4 +93,9 @@ export function parseReactions(reactions: Json | null): Reaction[] {
   }
   
   return [];
+}
+
+// New function to convert Reaction[] to Json for Supabase
+export function reactionsToJson(reactions: Reaction[]): Json {
+  return reactions as unknown as Json;
 }

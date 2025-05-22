@@ -1,7 +1,6 @@
-
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Conversation, Message, User, Reaction, parseUserStatus, parseMessageContentType, parseMessageStatus, parseReactions } from '../types';
+import { Conversation, Message, User, Reaction, parseUserStatus, parseMessageContentType, parseMessageStatus, parseReactions, reactionsToJson } from '../types';
 import { useAuth } from './AuthContext';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -550,7 +549,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // Update message with new reactions
         const { error } = await supabase
           .from('messages')
-          .update({ reactions: reactionsArray })
+          .update({ reactions: reactionsToJson(reactionsArray) })
           .eq('id', messageId);
           
         if (error) throw error;
@@ -588,7 +587,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Update message with new reactions
       const { error } = await supabase
         .from('messages')
-        .update({ reactions: reactionsArray })
+        .update({ reactions: reactionsToJson(reactionsArray) })
         .eq('id', messageId);
         
       if (error) throw error;

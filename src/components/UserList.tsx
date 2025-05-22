@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useChat } from '@/context/ChatContext';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -89,7 +90,8 @@ export const UserList: React.FC = () => {
               placeholder="Search users..." 
               value={searchQuery}
               onChange={(e) => handleSearch(e.target.value)}
-              />
+              className="pl-9"
+            />
           </div>
           <ScrollArea className="h-[300px] rounded-md border">
             <div className="p-4">
