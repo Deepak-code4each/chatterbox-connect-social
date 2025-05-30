@@ -47,6 +47,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     replyToMessageId?: string
   ) => {
     if (currentConversation) {
+      console.log('Sending message to conversation:', currentConversation.id, currentConversation.type);
       await sendMessage(currentConversation.id, content, contentType, replyToMessageId);
     }
   };
@@ -55,6 +56,11 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (currentConversation && user) {
       handleUserTyping(isTyping, currentConversation.id, user.username);
     }
+  };
+
+  const handleSetCurrentConversation = (conversation: Conversation | null) => {
+    console.log('Setting current conversation:', conversation?.id, conversation?.type, conversation?.name);
+    setCurrentConversation(conversation);
   };
 
   return (
@@ -69,7 +75,7 @@ export const ChatProvider: React.FC<{ children: React.ReactNode }> = ({ children
         loadingUsers,
         userTyping,
         sendMessage: handleSendMessage,
-        setCurrentConversation,
+        setCurrentConversation: handleSetCurrentConversation,
         deleteMessage,
         editMessage,
         markMessageAsSeen,

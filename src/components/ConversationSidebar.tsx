@@ -41,6 +41,7 @@ export const ConversationSidebar: React.FC = () => {
   });
 
   const handleConversationClick = (conversation: Conversation) => {
+    console.log('Conversation clicked:', conversation.id, conversation.type, conversation.name);
     setCurrentConversation(conversation);
   };
 
@@ -52,7 +53,16 @@ export const ConversationSidebar: React.FC = () => {
       return otherParticipant ? otherParticipant.full_name : 'Unknown User';
     }
     
-    return `Group (${conversation.participants.length})`;
+    // For groups and communities without names, create a descriptive name
+    if (conversation.type === 'group') {
+      return `Group (${conversation.participants.length} members)`;
+    }
+    
+    if (conversation.type === 'community') {
+      return `Community (${conversation.participants.length} members)`;
+    }
+    
+    return `Conversation (${conversation.participants.length})`;
   };
 
   const getConversationAvatar = (conversation: Conversation) => {
@@ -61,7 +71,7 @@ export const ConversationSidebar: React.FC = () => {
       return otherParticipant?.avatar_url || '';
     }
     
-    // For groups, return the first letter of the group name
+    // For groups, return empty string to show fallback
     return '';
   };
 
@@ -71,7 +81,12 @@ export const ConversationSidebar: React.FC = () => {
       return otherParticipant ? otherParticipant.full_name.charAt(0).toUpperCase() : '?';
     }
     
-    return conversation.name ? conversation.name.charAt(0).toUpperCase() : 'G';
+    // For groups/communities, use the first letter of the name or type
+    if (conversation.name) {
+      return conversation.name.charAt(0).toUpperCase();
+    }
+    
+    return conversation.type === 'group' ? 'G' : conversation.type === 'community' ? 'C' : 'T';
   };
 
   const getOtherUserStatus = (conversation: Conversation) => {
@@ -198,7 +213,7 @@ export const ConversationSidebar: React.FC = () => {
               return (
                 <div
                   key={conversation.id}
-                  className={`flex items-start p-2 rounded-md cursor-pointer space-x-3 ${
+                  className={`flex items-start p-2 rounded-md cursor-pointer space-x-3 transition-colors ${
                     isActive
                       ? 'bg-sidebar-accent/80'
                       : 'hover:bg-sidebar-accent/50'
