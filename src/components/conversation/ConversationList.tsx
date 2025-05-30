@@ -11,6 +11,7 @@ interface ConversationListProps {
   loading: boolean;
   onConversationClick: (conversation: Conversation) => void;
   onNewConversation: () => void;
+  activeTab?: 'chats' | 'groups';
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
@@ -19,6 +20,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   loading,
   onConversationClick,
   onNewConversation,
+  activeTab = 'chats',
 }) => {
   if (loading) {
     return (
@@ -37,7 +39,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   }
 
   if (conversations.length === 0) {
-    return <EmptyConversations onNewConversation={onNewConversation} />;
+    return <EmptyConversations onNewConversation={onNewConversation} activeTab={activeTab} />;
   }
 
   return (

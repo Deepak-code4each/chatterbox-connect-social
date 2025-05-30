@@ -20,8 +20,18 @@ export const ConversationSidebar: React.FC = () => {
     createConversation
   } = useChat();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<'chats' | 'groups'>('chats');
 
   const filteredConversations = conversations.filter(conv => {
+    // First filter by tab type
+    if (activeTab === 'chats' && conv.type !== 'direct') {
+      return false;
+    }
+    if (activeTab === 'groups' && conv.type === 'direct') {
+      return false;
+    }
+    
+    // Then filter by search query
     if (!searchQuery) return true;
     
     // Search in conversation name
@@ -43,20 +53,43 @@ export const ConversationSidebar: React.FC = () => {
 
   const startNewConversation = async () => {
     try {
-      // For demo purposes, create a conversation with another random user
-      if (users.length > 0) {
-        const randomUser = users[0];
-        const conversationId = await createConversation([randomUser.id]);
-        
-        // Find the newly created conversation in the list
-        const newConversation = conversations.find(c => c.id === conversationId);
-        if (newConversation) {
-          setCurrentConversation(newConversation);
+      if (activeTab === 'chats') {
+        // For direct chats, create a conversation with another random user
+        if (users.length > 0) {
+          const randomUser = users[0];
+          const conversationId = await createConversation([randomUser.id]);
+          
+          // Find the newly created conversation in the list
+          const newConversation = conversations.find(c => c.id === conversationId);
+          if (newConversation) {
+            setCurrentConversation(newConversation);
+          }
+        }
+      } else {
+        // For groups, create a group conversation
+        if (users.length >= 2) {
+          const groupUsers = users.slice(0, 2); // Get first 2 users for demo
+          const conversationId = await createConversation(
+            groupUsers.map(u => u.id), 
+            'New Group', 
+            'group'
+          );
+          
+          // Find the newly created conversation in the list
+          const newConversation = conversations.find(c => c.id === conversationId);
+          if (newConversation) {
+            setCurrentConversation(newConversation);
+          }
         }
       }
     } catch (error) {
       console.error('Error creating conversation:', error);
     }
+  };
+
+  const handleTabChange = (tab: 'chats' | 'groups') => {
+    console.log('Tab changed to:', tab);
+    setActiveTab(tab);
   };
 
   return (
@@ -69,7 +102,10 @@ export const ConversationSidebar: React.FC = () => {
         />
       </div>
       
-      <ConversationTabs />
+      <ConversationTabs 
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+      />
       
       <ScrollArea className="flex-1">
         <ConversationList
@@ -78,6 +114,7 @@ export const ConversationSidebar: React.FC = () => {
           loading={loadingConversations}
           onConversationClick={handleConversationClick}
           onNewConversation={startNewConversation}
+          activeTab={activeTab}
         />
       </ScrollArea>
     </div>
